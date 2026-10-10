@@ -1,0 +1,162 @@
+# =============================================================================
+# Aiqon — Shipping Route Recommendation System
+# .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+wheels/
+share/python-wheels/
+MANIFEST
+
+# -----------------------------------------------------------------------------
+# Virtual Environments
+# -----------------------------------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+.env/
+.conda/
+conda-env/
+
+# -----------------------------------------------------------------------------
+# Environment Variables & Secrets
+# NEVER commit API keys
+# -----------------------------------------------------------------------------
+.env
+.env.*
+*.env
+secrets.py
+config_local.py
+
+# -----------------------------------------------------------------------------
+# Results & Generated Output
+# (large CSVs generated at runtime — not source files)
+# -----------------------------------------------------------------------------
+results/
+*.csv
+*.txt
+!README.md
+
+# -----------------------------------------------------------------------------
+# Flask / Web Server
+# -----------------------------------------------------------------------------
+instance/
+.webassets-cache
+flask_session/
+
+# -----------------------------------------------------------------------------
+# IDE & Editor Files
+# -----------------------------------------------------------------------------
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm / JetBrains
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# -----------------------------------------------------------------------------
+# OS Generated Files
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+
+# -----------------------------------------------------------------------------
+# Logs & Debugging
+# -----------------------------------------------------------------------------
+*.log
+*.out
+*.pid
+pip-log.txt
+pip-delete-this-directory.txt
+crash.log
+
+# -----------------------------------------------------------------------------
+# Testing & Coverage
+# -----------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+nosetests.xml
+test-results/
+
+# -----------------------------------------------------------------------------
+# Type Checking & Linting
+# -----------------------------------------------------------------------------
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pytype/
+
+# -----------------------------------------------------------------------------
+# Jupyter Notebooks (checkpoints)
+# -----------------------------------------------------------------------------
+.ipynb_checkpoints/
+*.ipynb
+
+# -----------------------------------------------------------------------------
+# Distribution / Packaging
+# -----------------------------------------------------------------------------
+.eggs/
+*.egg-link
+pip-wheel-metadata/
