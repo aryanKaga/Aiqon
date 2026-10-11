@@ -235,11 +235,7 @@ python main.py evaluate
 python main.py evaluate --seed 123
 ```
 
-```bash
-# Stress-test mode: overrides 12 shipments with tight commercial deadlines/budgets
-# (see "Stress-Test Mode" below). Also works as: python evaluate.py --stress-test
-python main.py evaluate --stress-test
-```
+
 
 **Decision category tags assigned per shipment:**
 
@@ -272,8 +268,6 @@ python main.py evaluate --stress-test
 The standard benchmark produces mostly **High**-tier results because ~70% of generated deadlines are loose (1.25–2.2× slack), so 22 of 40 shipments fall into the *Trivial Risk* category. `--stress-test` tightens a fixed subset of shipments so the Pareto filter and risk weight have real cost-vs-reliability trade-offs to resolve.
 
 ```bash
-python main.py evaluate --stress-test
-# equivalent:
 python evaluate.py --stress-test
 ```
 
