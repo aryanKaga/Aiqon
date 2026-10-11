@@ -138,6 +138,13 @@ conda activate aiqon
 # 3. Install dependencies
 pip install -r requirements.txt
 ```
+### Create Dataset
+
+Create Dataset first
+
+```bash
+python -m Data/Data_Synthesizer.py
+### 1. Recommend a Route
 
 ---
 
@@ -146,13 +153,7 @@ pip install -r requirements.txt
 All commands are run from the project root (`Aiqon/`) with the virtual environment active.
 
 ---
-### Create Dataset
 
-Create Dataset first
-
-```bash
-python -m Data/Data_Synthesizer.py
-### 1. Recommend a Route
 
 Find the optimal shipping route for a single shipment and print a full candidate comparison table plus plain-language explanation.
 
