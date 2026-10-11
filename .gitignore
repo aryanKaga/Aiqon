@@ -57,6 +57,7 @@ results/
 *.csv
 *.txt
 !README.md
+!requirements.txt
 
 # -----------------------------------------------------------------------------
 # Flask / Web Server

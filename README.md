@@ -104,7 +104,7 @@ Aiqon/
 
 ```bash
 # 1. Clone or download the repository
-git clone <repo-url>
+git clone https://github.com/aryanKaga/Aiqon
 cd Aiqon
 
 # 2. Create a virtual environment
