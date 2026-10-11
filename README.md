@@ -23,6 +23,7 @@
 9. [Methodology](#methodology)
 10. [Design Decisions](#design-decisions)
 11. [Scoring Formula](#scoring-formula)
+12. [Relationship to Vehicle Routing (OR-Tools)](#relationship-to-vehicle-routing-or-tools)
 
 ---
 
@@ -202,7 +203,7 @@ usage: main.py recommend [-h] --shipment ID [--weights COST TIME RISK] [--seed S
 
 ### 2. Evaluate All Shipments
 
-Run the engine across all 40 shipments, compute four baseline strategies, calculate regret, Pareto membership, and decision category tags (open / forced / trivial).
+Run the engine across all 40 shipments, compute four baseline strategies, calculate regret, Pareto membership, decision category tags (open / forced / trivial), and on-time reliability tier distribution.
 
 ```bash
 python main.py evaluate
@@ -213,9 +214,35 @@ python main.py evaluate
 python main.py evaluate --seed 123
 ```
 
+```bash
+# Stress-test mode: tighten deadlines to commercial realistic windows (60%–88% on-time)
+# Eliminates artificial >99.9% trivial-risk cases seen with loose synthetic deadlines
+python main.py evaluate --stress-test
+```
+
+**Decision category tags assigned per shipment:**
+
+| Tag | Condition | Interpretation |
+|---|---|---|
+| **Forced** | Exactly 1 Pareto-optimal candidate | Weight settings cannot change the outcome |
+| **Open** | ≥ 2 Pareto-optimal candidates | Priority weights actively resolve a real trade-off |
+| **Trivial Risk** | All feasible routes ≥ 99.9% on-time | No meaningful reliability trade-off exists (loose deadlines) |
+
+**Reliability tiers reported for each recommended route:**
+
+| Tier | Range | Meaning |
+|---|---|---|
+| High | ≥ 95% on-time | Meets commercial perishable / high-value standards |
+| Moderate | 80 – 95% on-time | Acceptable for general cargo with buffer |
+| At-Risk | < 80% on-time | Deadline is tight; delays likely to cause misses |
+
+> Use `--stress-test` to force At-Risk and Moderate outcomes. The standard benchmark uses the generated dataset deadlines, which are intentionally loose for ~half the shipments to ensure every route is feasible by construction.
+
 **Output files created:**
-- `results/results_table.csv` — per-shipment metrics and baseline comparisons
-- `results/summary.txt` — aggregate statistics
+- `results/results_table.csv` — per-shipment metrics, reliability tier, and baseline comparisons
+- `results/summary.txt` — aggregate statistics with reliability distribution
+- `results/results_table_stress.csv` — stress-test variant output (only with `--stress-test`)
+- `results/summary_stress.txt` — stress-test summary (only with `--stress-test`)
 
 ---
 
@@ -341,8 +368,10 @@ If no API key is set, `llm_summary.py` automatically falls back to a high-qualit
 
 | File | Description |
 |---|---|
-| `results/results_table.csv` | Per-shipment: recommended route, cost, time, on-time prob, baseline picks, regret, Pareto flag, decision tag |
-| `results/summary.txt` | Aggregate statistics: constraint satisfaction rate, Pareto efficiency rate, mean regret, baseline agreement percentages |
+| `results/results_table.csv` | Per-shipment: recommended route, cost, time, on-time prob, reliability tier, baseline picks, regret, Pareto flag, decision tag |
+| `results/summary.txt` | Aggregate statistics: constraint satisfaction rate, Pareto efficiency rate, decision complexity breakdown, reliability tier distribution, mean regret, baseline agreement percentages |
+| `results/results_table_stress.csv` | Same as above, generated under realistic tight deadlines (`--stress-test` mode) |
+| `results/summary_stress.txt` | Aggregate summary for stress-test run; shows Moderate/At-Risk reliability distribution |
 | `results/sensitivity_table.csv` | Per-shipment per-scenario: route pick stability across 11 perturbation scenarios |
 | `results/sensitivity_summary.txt` | ROBUST / CLOSE CALL tags and per-shipment stability percentage breakdown |
 
@@ -358,7 +387,10 @@ If no API key is set, `llm_summary.py` automatically falls back to a high-qualit
 | **Risk score** | `0.5 × norm(P(miss deadline)) + 0.5 × norm(P95 buffer days)` |
 | **Pareto filter** | Non-dominated set on `(cost, expected_time, risk)` among feasible routes only |
 | **Final score** | Min-max normalised cost and time + raw risk, weighted by the shipment's priority strategy |
+| **Decision tagging** | **Forced** (1 Pareto option), **Open** (≥ 2 Pareto options), **Trivial Risk** (all feasible routes ≥ 99.9% on-time) |
+| **Reliability tiers** | Recommended route classified as High (≥ 95%), Moderate (80–95%), or At-Risk (< 80%) on-time probability |
 | **Sensitivity** | 11 perturbation scenarios per open shipment (3 weight shifts, 4 on-time threshold shifts, 2 delay distribution shifts, 2 normalisation boundary changes); ROBUST if ≥ 80% of scenarios agree on the same recommendation |
+| **Stress-test mode** | 12 selected shipments receive tightened deadlines and budgets to produce commercial-realistic reliability distributions (60–88% on-time), exposing genuine Pareto trade-offs absent from the loose synthetic defaults |
 
 ---
 
@@ -401,3 +433,21 @@ Where `norm(x) = (x - x_min) / (x_max - x_min)` across all Pareto routes, and th
 | `reliability` | 0.20 | 0.20 | 0.60 |
 
 The route with the **lowest composite score** is recommended.
+
+---
+
+## Relationship to Vehicle Routing (OR-Tools)
+
+Aiqon solves **macro-level stochastic corridor selection** — choosing the optimal sea/air/rail route for an individual shipment under uncertainty. This is related to, but distinct from, the classical **Vehicle Routing Problem (VRP)**.
+
+| Dimension | Aiqon | Google OR-Tools VRP |
+|---|---|---|
+| **Problem scope** | Single shipment, multi-route Pareto selection | Fleet of vehicles, combinatorial pickup/delivery |
+| **Uncertainty** | Stochastic delay via Monte Carlo simulation | Typically deterministic (though stochastic VRP extensions exist) |
+| **Objectives** | Cost, transit time, on-time reliability | Total distance / time, vehicle capacity, time windows |
+| **Decision** | Which corridor (route) to use | Which vehicle visits which customer in which order |
+| **Scale** | 40 shipments, 76 routes | Thousands of nodes, NP-hard combinatorial optimisation |
+
+A natural **complementary extension** would use OR-Tools to solve the first/last-mile collection and delivery problem — optimally scheduling a fleet of trucks to consolidate cargo for the sea/air legs that Aiqon selects. The two systems operate at different levels: Aiqon at the port-to-port macro corridor, OR-Tools at the local depot-to-port micro routing level.
+
+See [Google OR-Tools VRP documentation](https://developers.google.com/optimization/routing/vrp) for implementation details.

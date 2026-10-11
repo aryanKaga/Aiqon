@@ -1,5 +1,8 @@
 # Shipment Routing Dataset (graph formulation)
 
+> **Repository Reference:** For the complete dataset files and versioned updates, please refer to:  
+> **[https://github.com/aryanKaga/Aiqon/tree/main/Data/data](https://github.com/aryanKaga/Aiqon/tree/main/Data/data)**
+
 A synthetic dataset for **multi-objective route recommendation** in global logistics, structured as a graph problem. Routes are found by searching an explicit network, and each shipment carries explicit constraints (deadline, budget, required on-time probability).
 
 | Graph concept | File | What it holds |
@@ -27,6 +30,8 @@ python data_preparation.py --n_shipments 40 --seed 42 --out data
 | `--out` | `data` | Output directory |
 
 Default output (seed 42): 15 hubs, 105 legs, 40 shipments, 171 routes. Before writing, the script checks that every route is a connected, loop-free path from the shipment's origin to its destination with at most one air leg, and that every shipment has at least one route that meets its budget and on-time requirement.
+
+> **Stress-testing note:** About half the shipments use "loose" deadlines (1.25–2.2× the reference route time). Under these defaults the engine produces near-perfect on-time probabilities (>99.9%) for many shipments, eliminating meaningful reliability trade-offs. To produce commercially realistic reliability distributions (60–88% on-time), run `python main.py evaluate --stress-test`, which overrides the deadlines and budgets for 12 selected shipments to approximate real commercial freight delivery windows.
 
 ```python
 import numpy as np, pandas as pd
@@ -213,10 +218,14 @@ From the candidates, the shipment gets 3-5 routes: the **cheapest**, the **faste
 
 Constraints are generated so that every shipment has at least one feasible route, while the others may fail.
 
-1. **Deadline:** a reference route is chosen (from the faster options for urgent and perishable cargo, the slower half for general cargo, any option for high-value). The deadline is that route's total-time quantile at `required_on_time_prob` (from 4,000 Monte Carlo runs), multiplied by 1.05-1.25 for a *tight* shipment (30%) or 1.25-2.2 for a *loose* one.
-2. **Budget:** the cost of the cheapest option that meets the on-time requirement, multiplied by 1.10-1.40 (tight) or 1.4-3.0 (loose).
+1. **Deadline:** a reference route is chosen (from the faster options for urgent and perishable cargo, the slower half for general cargo, any option for high-value). The deadline is that route's total-time quantile at `required_on_time_prob` (from 4,000 Monte Carlo runs), multiplied by:
+   - **1.05–1.25×** for a *tight* shipment (30% of shipments) — these produce realistic Moderate/At-Risk reliability outcomes.
+   - **1.25–2.2×** for a *loose* shipment (70% of shipments) — these produce near-perfect (>99.9%) on-time probabilities, leaving no reliability trade-off to resolve.
+2. **Budget:** the cost of the cheapest option that meets the on-time requirement, multiplied by 1.10–1.40 (tight) or 1.4–3.0 (loose).
 
 With seed 42, about half the shipments have two or more feasible routes. The rest, mostly urgent and high-value cargo, are tightly constrained and often have a single feasible option.
+
+> **Impact on evaluation:** The prevalence of loose deadlines means many shipments fall into the *Trivial Risk* category (all feasible routes ≥ 99.9% on-time) in standard evaluation. This is expected by design — the generator guarantees feasibility by being generous with deadlines. The `--stress-test` flag in `evaluate.py` corrects for this by applying tighter commercial deadlines to 12 shipments, producing authentic reliability distributions.
 
 ---
 
@@ -226,6 +235,9 @@ With seed 42, about half the shipments have two or more feasible routes. The res
 - Because routes carry no labels, a recommender cannot succeed by recognising a route "type". The cheapest, fastest and most reliable routes are present for every shipment, but which one wins varies by shipment.
 - Run **sensitivity analysis** by changing scoring weights, the required on-time probability, or regenerating with different seeds.
 - Within a shipment, cheaper routes tend to be slower and riskier. That follows from the physics of the modes and the graph, but the correlation is imperfect (with seed 42 the cheapest route is never the fastest, and it is the most reliable in about 5% of shipments), and about a quarter of routes are dominated on cost, time and delay probability.
+- Use the `--stress-test` flag in `evaluate.py` to expose genuine cost-vs-reliability trade-offs: 12 shipments receive tighter commercial deadlines, driving on-time probabilities into the 60–88% range and eliminating trivial-risk cases.
+
+**Relationship to Vehicle Routing (VRP):** This dataset supports *macro-level stochastic corridor selection* — which port-to-port route to use for each shipment. A complementary problem is *micro-level fleet scheduling*: optimally routing a fleet of trucks for first/last-mile collection and delivery to the port. Google OR-Tools solves this class of combinatorial Vehicle Routing Problem. The two problems are hierarchically related: Aiqon selects the intercontinental corridor; OR-Tools would schedule the ground transport feeding into it.
 
 ---
 
