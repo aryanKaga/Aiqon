@@ -12,6 +12,7 @@
 4. [Installation & Setup](#installation--setup)
    - [Quickstart (venv)](#quickstart-venv)
    - [Quickstart (conda)](#quickstart-conda)
+   - [Create Dataset](#create-dataset)
 5. [Using the CLI (Python Commands)](#using-the-cli-python-commands)
    - [recommend](#1-recommend-a-route)
    - [evaluate](#2-evaluate-all-shipments)
@@ -46,6 +47,7 @@ The system covers **15 global hubs**, **105 directed legs** (sea / rail / air), 
 ```
 Aiqon/
 ├── Data/
+│   ├── Data_Synthesizer.py   # Generates the CSV dataset in Data/data/
 │   └── data/
 │       ├── hubs.csv          # 15 port nodes with congestion & geo-risk scores
 │       ├── legs.csv          # 105 directed legs (sea/rail/air) with delay model params
@@ -111,14 +113,20 @@ cd Aiqon
 python -m venv .venv
 
 # 3. Activate it
-# Windows:
+# Windows (CMD):
 .venv\Scripts\activate
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# Windows (Git Bash):
+source .venv/Scripts/activate
 # macOS / Linux:
 source .venv/bin/activate
 
 # 4. Install required dependencies
 pip install -r requirements.txt
 ```
+
+> **Windows note:** the venv folder is `Scripts` only when it was created by the official Windows Python (python.org or Microsoft Store). If you see a `bin` folder instead, the venv was made by a Unix-style Python (WSL, Cygwin, MSYS2). Delete `.venv` and recreate it with `py -m venv .venv` from CMD or PowerShell. If PowerShell blocks activation, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
 That's it — no further configuration is needed for the core CLI and web interface.
 
@@ -138,13 +146,16 @@ conda activate aiqon
 # 3. Install dependencies
 pip install -r requirements.txt
 ```
+
+---
+
 ### Create Dataset
 
-Create Dataset first
+Generate the dataset first (writes `hubs.csv`, `legs.csv`, `routes.csv` and `shipments.csv` into `Data/data/`). Run it from the project root:
 
 ```bash
-python -m Data/Data_Synthesizer.py
-### 1. Recommend a Route
+python Data/Data_Synthesizer.py
+```
 
 ---
 
@@ -154,6 +165,7 @@ All commands are run from the project root (`Aiqon/`) with the virtual environme
 
 ---
 
+### 1. Recommend a Route
 
 Find the optimal shipping route for a single shipment and print a full candidate comparison table plus plain-language explanation.
 
