@@ -151,7 +151,7 @@ All commands are run from the project root (`Aiqon/`) with the virtual environme
 Create Dataset first
 
 ```bash
-python -m Data_Synthesizer.py
+python -m Data/Data_Synthesizer.py
 ### 1. Recommend a Route
 
 Find the optimal shipping route for a single shipment and print a full candidate comparison table plus plain-language explanation.
