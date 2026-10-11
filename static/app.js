@@ -49,6 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (targetTab === 'tab-report') {
           pageTitle.textContent = "Executive Report & AI Summary Generator";
           pageSubtitle.textContent = "Generate executive briefs using live LLM models or built-in decision intelligence";
+          const summaryBox = document.getElementById('llm-summary-content');
+          const tag = document.getElementById('llm-provider-tag');
+          if (summaryBox && tag) {
+            summaryBox.innerHTML = '<div class="spinner"></div> Initializing AI executive summary engine...';
+            tag.textContent = 'AI Engine: Initializing...';
+            generateLLMSummary();
+          }
         }
       });
     });
@@ -446,14 +453,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateReportMetaData(data) {
     const grid = document.getElementById('report-meta-grid');
     const s = data.shipment || {};
-    const recRoute = data.recommended_route || {};
+    const deadline = s.max_deadline_days || s.deadline_days || 20;
 
     grid.innerHTML = `
       <div><strong>Shipment ID:</strong> ${s.shipment_id || 'S001'}</div>
       <div><strong>Route Corridor:</strong> ${s.origin || 'BOM'} → ${s.destination || 'RTM'}</div>
       <div><strong>Cargo Weight:</strong> ${(s.weight_kg || 10000).toLocaleString()} kg</div>
       <div><strong>Budget Limit:</strong> $${(s.budget_usd || 50000).toLocaleString()}</div>
-      <div><strong>Max Deadline:</strong> ${s.max_deadline_days || 20} Days</div>
+      <div><strong>Max Deadline:</strong> ${deadline} Days</div>
       <div><strong>Recommended Route:</strong> ${data.recommended_route_id || 'N/A'}</div>
       <div><strong>Total Route Cost:</strong> $${(data.cost_usd || 0).toLocaleString()}</div>
       <div><strong>Expected Duration:</strong> ${(data.expected_days || 0).toFixed(1)} Days</div>
@@ -464,27 +471,40 @@ document.addEventListener('DOMContentLoaded', () => {
   async function generateLLMSummary() {
     const summaryBox = document.getElementById('llm-summary-content');
     const tag = document.getElementById('llm-provider-tag');
-    const customPrompt = document.getElementById('report-prompt').value;
+    const button = document.getElementById('btn-generate-llm');
+    const shipmentId = document.getElementById('report-shipment-select').value || 'S001';
+    const customPrompt = document.getElementById('report-prompt').value.trim();
 
     summaryBox.innerHTML = '<div class="spinner"></div> Generating AI Executive Summary...';
-
-    if (!currentRecommendation) {
-      await runRecommendation("S001");
-    }
+    button.disabled = true;
 
     try {
+      const recommendationResponse = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shipment_id: shipmentId })
+      });
+      const recommendation = await recommendationResponse.json();
+      if (!recommendationResponse.ok || recommendation.status !== 'success') {
+        throw new Error(recommendation.error || 'Unable to load the selected shipment recommendation.');
+      }
+
+      updateReportMetaData(recommendation);
       const res = await fetch('/api/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          recommendation: currentRecommendation,
-          shipment: currentRecommendation.shipment,
+          recommendation,
+          shipment: recommendation.shipment,
           prompt: customPrompt
         })
       });
 
       const data = await res.json();
-      tag.textContent = `AI Engine: ${data.provider}`;
+      if (!res.ok || !data.summary) {
+        throw new Error(data.error || 'Unable to generate an executive summary.');
+      }
+      tag.textContent = `AI Engine: ${data.provider}${data.status === 'warning' ? ' (fallback)' : ''}`;
 
       if (window.marked && data.summary) {
         summaryBox.innerHTML = marked.parse(data.summary);
@@ -493,7 +513,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       console.error(err);
-      summaryBox.innerHTML = '<span class="red-text">Error generating executive summary.</span>';
+      tag.textContent = 'AI Engine: unavailable';
+      summaryBox.textContent = `Error generating executive summary: ${err.message}`;
+    } finally {
+      button.disabled = false;
     }
   }
 });

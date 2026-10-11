@@ -22,6 +22,7 @@ def generate_llm_summary(recommendation_data: dict, shipment_data: dict, custom_
     """
     gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     openai_key = os.environ.get("OPENAI_API_KEY")
+    api_failed = False
     
     rec_route = recommendation_data.get("recommended_route", {})
     cost = recommendation_data.get("cost_usd", 0)
@@ -32,7 +33,7 @@ def generate_llm_summary(recommendation_data: dict, shipment_data: dict, custom_
     origin = shipment_data.get("origin", "N/A")
     dest = shipment_data.get("destination", "N/A")
     budget = shipment_data.get("budget_usd", 0)
-    deadline = shipment_data.get("max_deadline_days", 0)
+    deadline = shipment_data.get("max_deadline_days") or shipment_data.get("deadline_days", 0)
     priority = shipment_data.get("priority", "balanced")
     cargo_type = shipment_data.get("cargo_type", "Standard")
     
@@ -85,8 +86,9 @@ Format output in clean GitHub markdown with headings:
                     "provider": "Gemini 1.5 Flash API",
                     "status": "success"
                 }
-        except Exception as e:
-            print(f"[LLM Summary] Gemini API call failed: {e}")
+        except Exception:
+            api_failed = True
+            print("[LLM Summary] Gemini API call failed.")
 
     # 2. Try OpenAI API if key exists
     if openai_key:
@@ -105,6 +107,7 @@ Format output in clean GitHub markdown with headings:
                 },
                 method="POST"
             )
+            req.add_header("Authorization", f"Bearer {openai_key}")
             with urllib.request.urlopen(req, timeout=10) as resp:
                 res = json.loads(resp.read().decode("utf-8"))
                 text = res["choices"][0]["message"]["content"]
@@ -113,8 +116,9 @@ Format output in clean GitHub markdown with headings:
                     "provider": "OpenAI GPT-4o-mini API",
                     "status": "success"
                 }
-        except Exception as e:
-            print(f"[LLM Summary] OpenAI API call failed: {e}")
+        except Exception:
+            api_failed = True
+            print("[LLM Summary] OpenAI API call failed.")
 
     # 3. Smart Built-in Analytical AI Fallback Engine
     fallback_summary = _generate_fallback_summary(
@@ -125,7 +129,7 @@ Format output in clean GitHub markdown with headings:
     return {
         "summary": fallback_summary,
         "provider": "Built-in Logistics AI Engine (Offline/Rule-based)",
-        "status": "success"
+        "status": "warning" if api_failed else "success"
     }
 
 

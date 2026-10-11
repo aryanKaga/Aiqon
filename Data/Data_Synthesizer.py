@@ -423,6 +423,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--n_shipments", type=int, default=40)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--out", default="data")
+    ap.add_argument("--out", default="Datadata")
     a = ap.parse_args()
     main(a.n_shipments, a.seed, a.out)
