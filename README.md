@@ -15,6 +15,7 @@
 5. [Using the CLI (Python Commands)](#using-the-cli-python-commands)
    - [recommend](#1-recommend-a-route)
    - [evaluate](#2-evaluate-all-shipments)
+   - [stress-test mode](#stress-test-mode)
    - [sensitivity](#3-sensitivity-analysis)
    - [server](#4-launch-web-server)
 6. [Using the Web Interface](#using-the-web-interface)
@@ -56,7 +57,7 @@ Aiqon/
 │   ├── DataLoader.py         # CSV loader, graph builder, and lookup helpers
 │   └── engine.py             # RecommendationEngine: MC simulation, Pareto filter, scorer
 │
-├── evaluate.py               # Baseline comparison, regret, Pareto membership, tagging
+├── evaluate.py               # Baseline comparison, regret, Pareto membership, tagging, --stress-test
 ├── sensitivity.py            # Weight / on-time / delay / normalisation perturbations
 ├── llm_summary.py            # Optional AI executive summary (Gemini / OpenAI / rule-based)
 ├── server.py                 # Flask REST API + web dashboard backend
@@ -72,6 +73,8 @@ Aiqon/
 ├── results/                  # Auto-created; holds all output CSVs and summaries
 │   ├── results_table.csv
 │   ├── summary.txt
+│   ├── results_table_stress.csv   # only after `evaluate --stress-test`
+│   ├── summary_stress.txt         # only after `evaluate --stress-test`
 │   ├── sensitivity_table.csv
 │   └── sensitivity_summary.txt
 └── README.md
@@ -215,8 +218,8 @@ python main.py evaluate --seed 123
 ```
 
 ```bash
-# Stress-test mode: tighten deadlines to commercial realistic windows (60%–88% on-time)
-# Eliminates artificial >99.9% trivial-risk cases seen with loose synthetic deadlines
+# Stress-test mode: overrides 12 shipments with tight commercial deadlines/budgets
+# (see "Stress-Test Mode" below). Also works as: python evaluate.py --stress-test
 python main.py evaluate --stress-test
 ```
 
@@ -236,13 +239,42 @@ python main.py evaluate --stress-test
 | Moderate | 80 – 95% on-time | Acceptable for general cargo with buffer |
 | At-Risk | < 80% on-time | Deadline is tight; delays likely to cause misses |
 
-> Use `--stress-test` to force At-Risk and Moderate outcomes. The standard benchmark uses the generated dataset deadlines, which are intentionally loose for ~half the shipments to ensure every route is feasible by construction.
+> The standard benchmark uses the generated dataset deadlines, which are intentionally loose (~70% of shipments use 1.25–2.2× slack) so that every shipment is feasible by construction. Use [`--stress-test`](#stress-test-mode) to exercise the Moderate and At-Risk reliability tiers.
 
 **Output files created:**
 - `results/results_table.csv` — per-shipment metrics, reliability tier, and baseline comparisons
 - `results/summary.txt` — aggregate statistics with reliability distribution
-- `results/results_table_stress.csv` — stress-test variant output (only with `--stress-test`)
+- `results/results_table_stress.csv` — stress-test variant output (only with `--stress-test`; standard outputs are left intact)
 - `results/summary_stress.txt` — stress-test summary (only with `--stress-test`)
+
+---
+
+### Stress-Test Mode
+
+The standard benchmark produces mostly **High**-tier results because ~70% of generated deadlines are loose (1.25–2.2× slack), so 22 of 40 shipments fall into the *Trivial Risk* category. `--stress-test` tightens a fixed subset of shipments so the Pareto filter and risk weight have real cost-vs-reliability trade-offs to resolve.
+
+```bash
+python main.py evaluate --stress-test
+# equivalent:
+python evaluate.py --stress-test
+```
+
+**What it changes**
+
+| Item | Behaviour |
+|---|---|
+| Shipments overridden | 12 fixed IDs: `S001, S003, S004, S006, S007, S008, S011, S016, S017, S018, S027, S034` |
+| Deadlines | Replaced with tighter commercial values of **14.5 – 42 days** |
+| Budgets | Replaced with **$12,000 – $30,000** |
+| Other 28 shipments | Unchanged |
+| Target reliability | Pushes on-time probability into the Moderate / At-Risk tiers (**≈ 60% – 88%**) |
+
+**What it does *not* change**
+
+- The overrides are applied **in memory** at evaluation time — the CSV files in `Data/data/` are never modified.
+- Standard outputs (`results_table.csv`, `summary.txt`) are not overwritten. Stress-test results are written to separate files: `results/results_table_stress.csv` and `results/summary_stress.txt`.
+
+> **Note:** The override IDs refer to the **seed-42** dataset. If you regenerate the data with different settings, revisit the 12 IDs and their override values, as the same shipment ID may map to a different origin-destination pair.
 
 ---
 
@@ -370,8 +402,8 @@ If no API key is set, `llm_summary.py` automatically falls back to a high-qualit
 |---|---|
 | `results/results_table.csv` | Per-shipment: recommended route, cost, time, on-time prob, reliability tier, baseline picks, regret, Pareto flag, decision tag |
 | `results/summary.txt` | Aggregate statistics: constraint satisfaction rate, Pareto efficiency rate, decision complexity breakdown, reliability tier distribution, mean regret, baseline agreement percentages |
-| `results/results_table_stress.csv` | Same as above, generated under realistic tight deadlines (`--stress-test` mode) |
-| `results/summary_stress.txt` | Aggregate summary for stress-test run; shows Moderate/At-Risk reliability distribution |
+| `results/results_table_stress.csv` | Same columns as `results_table.csv`, produced with the 12 stress-test overrides applied (`--stress-test` only) |
+| `results/summary_stress.txt` | Aggregate summary for the stress-test run; shows the Moderate / At-Risk reliability distribution (`--stress-test` only) |
 | `results/sensitivity_table.csv` | Per-shipment per-scenario: route pick stability across 11 perturbation scenarios |
 | `results/sensitivity_summary.txt` | ROBUST / CLOSE CALL tags and per-shipment stability percentage breakdown |
 
@@ -390,7 +422,7 @@ If no API key is set, `llm_summary.py` automatically falls back to a high-qualit
 | **Decision tagging** | **Forced** (1 Pareto option), **Open** (≥ 2 Pareto options), **Trivial Risk** (all feasible routes ≥ 99.9% on-time) |
 | **Reliability tiers** | Recommended route classified as High (≥ 95%), Moderate (80–95%), or At-Risk (< 80%) on-time probability |
 | **Sensitivity** | 11 perturbation scenarios per open shipment (3 weight shifts, 4 on-time threshold shifts, 2 delay distribution shifts, 2 normalisation boundary changes); ROBUST if ≥ 80% of scenarios agree on the same recommendation |
-| **Stress-test mode** | 12 selected shipments receive tightened deadlines and budgets to produce commercial-realistic reliability distributions (60–88% on-time), exposing genuine Pareto trade-offs absent from the loose synthetic defaults |
+| **Stress-test mode** | 12 fixed shipments (S001, S003, S004, S006, S007, S008, S011, S016, S017, S018, S027, S034) get in-memory overrides: deadlines 14.5–42 days, budgets $12,000–$30,000. Produces commercial-realistic reliability (≈60–88% on-time) and exposes Pareto trade-offs absent from the loose defaults. Source CSVs are untouched; results go to `*_stress` output files |
 
 ---
 
