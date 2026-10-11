@@ -88,7 +88,7 @@ Aiqon/
 
 | Package | Version | Purpose |
 |---|---|---|
-| `Python` | 3.9 + | Runtime |
+| `Python` | ≥ 3.10 | Runtime |
 | `numpy` | ≥ 1.24 | Monte Carlo simulation arrays |
 | `pandas` | ≥ 2.0 | Data loading, DataFrame operations |
 | `flask` | ≥ 3.0 | Web server & REST API |
@@ -128,7 +128,7 @@ pip install -r requirements.txt
 
 > **Windows note:** the venv folder is `Scripts` only when it was created by the official Windows Python (python.org or Microsoft Store). If you see a `bin` folder instead, the venv was made by a Unix-style Python (WSL, Cygwin, MSYS2). Delete `.venv` and recreate it with `py -m venv .venv` from CMD or PowerShell. If PowerShell blocks activation, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
-That's it — no further configuration is needed for the core CLI and web interface.
+Before using the CLI or web interface, generate the dataset as described below.
 
 ---
 
@@ -151,10 +151,10 @@ pip install -r requirements.txt
 
 ### Create Dataset
 
-Generate the dataset first (writes `hubs.csv`, `legs.csv`, `routes.csv` and `shipments.csv` into `Data/data/`). Run it from the project root:
+Generate the dataset after installing dependencies. Run this from the project root to write the CSV files into the directory used by the application:
 
 ```bash
-python Data/Data_Synthesizer.py
+python Data/Data_Synthesizer.py --out Data/data
 ```
 
 ---
